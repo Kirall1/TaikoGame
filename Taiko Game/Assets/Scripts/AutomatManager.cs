@@ -11,12 +11,13 @@ public class AutomatManager : MonoBehaviour
     public float moveSpeed = 5f; // Скорость перемещения
     public KeyCode exitKey = KeyCode.Escape; // Клавиша для выхода из режима фиксации
     public TextMeshProUGUI tooltipText;
+    public AudioSource audioSource;
 
     private bool isFixedMode = false; // Находится ли капсула в фиксированном режиме
     private Vector3 originalPosition; // Исходная позиция капсулы
     private Quaternion originalCapsuleRotation; // Исходная ориентация капсулы
     private Quaternion originalCameraRotation; // Исходная ориентация камеры
-
+    private Coroutine tooltipCoroutine; // Ссылка на корутину для подсказки
     private void Start()
     {
         if (capsuleTransform == null)
@@ -27,19 +28,36 @@ public class AutomatManager : MonoBehaviour
         {
             cameraTransform = Camera.main.transform; // Используем основную камеру по умолчанию
         }
+
+        if (tooltipText != null)
+        {
+            tooltipText.enabled = false; // Выключаем подсказку в начале
+        }
     }
+
+    float distance;
 
     private void Update()
     {
+        distance = Vector3.Distance(transform.position, capsuleTransform.position);
+
         if (isFixedMode && Input.GetKeyDown(exitKey))
         {
+            ExitFixedMode();
+        }
+
+        if(songManager.songStarted && !audioSource.isPlaying)
+        {
+            songManager.songStarted = false;
+            ScoreManager.CheckScores();
+            songManager.Stop();
             ExitFixedMode();
         }
     }
 
     private void OnMouseDown()
     {
-        if (!isFixedMode)
+        if (!isFixedMode && distance + 0.5 <= 4)
         {
             EnterFixedMode();
             songManager.Initialize();
@@ -60,7 +78,13 @@ public class AutomatManager : MonoBehaviour
         capsuleTransform.GetComponent<PlayerController>().enabled = false;
         cameraTransform.GetComponent<CameraController>().enabled = false;
         FindObjectOfType<HighlightOnHover>().enabled = false;
-        tooltipText.enabled = false;
+
+        // Запускаем корутину для отображения подсказки
+        if (tooltipCoroutine != null)
+        {
+            StopCoroutine(tooltipCoroutine);
+        }
+        tooltipCoroutine = StartCoroutine(ShowTooltipWithDelay());
     }
 
     private void ExitFixedMode()
@@ -72,10 +96,16 @@ public class AutomatManager : MonoBehaviour
         capsuleTransform.GetComponent<PlayerController>().enabled = true;
         cameraTransform.GetComponent<CameraController>().enabled = true;
         FindObjectOfType<HighlightOnHover>().enabled = true;
-        tooltipText.enabled = true;
-        songManager.Stop();
-        ScoreManager.ResetScore();
 
+        // Отключаем подсказку
+        if (tooltipCoroutine != null)
+        {
+            StopCoroutine(tooltipCoroutine);
+        }
+        tooltipText.enabled = false;
+
+        ScoreManager.CheckScores();
+        songManager.Stop();
     }
 
     private System.Collections.IEnumerator MoveCapsuleAndCamera(Vector3 targetPos, Vector3 targetCamRot)
@@ -106,5 +136,17 @@ public class AutomatManager : MonoBehaviour
         capsuleTransform.position = targetPos;
         capsuleTransform.rotation = targetPosition.rotation;
         cameraTransform.localRotation = targetCamQuaternion;
+    }
+
+    private System.Collections.IEnumerator ShowTooltipWithDelay()
+    {
+        if (tooltipText != null)
+        {
+            tooltipText.text = "Красная нота \"A\", Синяя нота \"D\"";
+            tooltipText.enabled = true;
+
+            yield return new WaitForSeconds(5f); // Показываем подсказку 3 секунды
+            tooltipText.enabled = false; // Выключаем подсказку
+        }
     }
 }

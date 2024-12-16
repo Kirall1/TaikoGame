@@ -11,23 +11,33 @@ public class Lane : MonoBehaviour
     public KeyCode input;
     public GameObject notePrefab;
     List<Note> notes;
+    List<Note> notesBot;
     public List<double> timeStamps;
-
+    public bool isBot;
+    public bool isRed;
+    double botMissChance;
     int spawnIndex;
     int inputIndex;
+    int inputIndexBot;
 
     // Start is called before the first frame update
     void Start()
     {
-        Initialize();
+        Initialize(false, false);
     }
 
-    public void Initialize()
+    public void Initialize(bool isBot, bool isRed)
     {
         notes = new List<Note>();
+        notesBot = new List<Note>();
+
         timeStamps = new List<double>();
+        botMissChance = 0.1;
         spawnIndex = 0;
         inputIndex = 0;
+        inputIndexBot = 0;
+        this.isBot = isBot;
+        this.isRed = isRed;
     }
     public void SetTimeStamps(Melanchall.DryWetMidi.Interaction.Note[] array)
     {
@@ -49,12 +59,13 @@ public class Lane : MonoBehaviour
             {
                 var note = Instantiate(notePrefab, transform);
                 notes.Add(note.GetComponent<Note>());
+                notesBot.Add(note.GetComponent<Note>());
                 note.GetComponent<Note>().assignedTime = (float)timeStamps[spawnIndex];
                 spawnIndex++;
             }
         }
 
-        if (inputIndex < timeStamps.Count)
+        if (inputIndex < timeStamps.Count && !isBot)
         {
             double timeStamp = timeStamps[inputIndex];
             double marginOfError = SongManager.Instance.marginOfError;
@@ -82,6 +93,37 @@ public class Lane : MonoBehaviour
             }
         }
 
+        if(inputIndexBot < timeStamps.Count && isBot)
+        {
+            double timeStamp = timeStamps[inputIndexBot];
+            double marginOfError = SongManager.Instance.marginOfError;
+            double audioTime = SongManager.GetAudioSourceTime() - (SongManager.Instance.inputDelayInMilliseconds / 1000.0);
+
+            if (Math.Abs(audioTime - timeStamp) < marginOfError)
+            {
+                if (UnityEngine.Random.value <= botMissChance) // 10% вероятность промаха
+                {
+                    print($"BotMiss");
+                    BotMiss();
+                    inputIndexBot++;
+                }
+                else
+                {
+                    
+                    print($"BotHit");
+                    if(isRed)
+                    {
+                        BotHitLeft();
+                    }
+                    else
+                    {
+                        BotHitRight();
+                    }
+                    Destroy(notesBot[inputIndexBot].gameObject);
+                    inputIndexBot++;
+                }
+            }
+        }
     }
     private void Hit()
     {
@@ -90,5 +132,17 @@ public class Lane : MonoBehaviour
     private void Miss()
     {
         ScoreManager.Miss();
+    }
+    private void BotHitLeft()
+    {
+        ScoreManager.HitBotLeft();
+    }
+    private void BotHitRight()
+    {
+        ScoreManager.HitBotRight();
+    }
+    private void BotMiss()
+    {
+        ScoreManager.MissBot();
     }
 }

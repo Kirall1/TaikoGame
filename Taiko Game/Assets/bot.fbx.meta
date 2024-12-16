@@ -31,7 +31,7 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: "\u0410\u0440\u043C\u0430\u0442\u0443\u0440\u0430|LeftArmMove.001"
+      name: "\u0410\u0440\u043C\u0430\u0442\u0443\u0440\u0430|LeftArmMove"
       takeName: "\u0410\u0440\u043C\u0430\u0442\u0443\u0440\u0430|RigthArmMove.001"
       internalID: -631791579859880196
       firstFrame: 0
